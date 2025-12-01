@@ -239,7 +239,7 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
                     </span>
                   </button>
                   <a
-                    href={item.imageUrl}
+                    href={item.link}
                     target="_blank"
                     rel="noreferrer"
                     className="text-white text-xs hover:underline px-2 py-1 rounded"
