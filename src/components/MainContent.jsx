@@ -98,7 +98,6 @@ export default function MainContent({
 
     return (
         <div className="flex-1 md:mt-0 p-6 md:ml-80 select-none">
-            {" "}
             {/* select-none để tránh bôi đen text khi kéo */}
             <DndContext
                 sensors={sensors}

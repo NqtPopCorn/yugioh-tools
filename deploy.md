@@ -32,3 +32,9 @@ import { BrowserRouter } from "react-router-dom";
   <App />
 </BrowserRouter>;
 ```
+
+cmd
+
+> > git push origin main
+> > npm run build
+> > npm run deploy

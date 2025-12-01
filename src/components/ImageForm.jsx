@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Upload } from "lucide-react";
 
 export default function ImageForm({ urlList, setUrlList }) {
     const [imageUrl, setImageUrl] = useState("");
@@ -64,10 +65,14 @@ export default function ImageForm({ urlList, setUrlList }) {
     };
 
     return (
-        <div className="flex items-baseline justify-between mb-4">
-            <form id="image-form" onSubmit={handleSubmit} className="block">
+        <div className="flex mb-4">
+            <form
+                id="image-form"
+                onSubmit={handleSubmit}
+                className="flex flex-1"
+            >
                 <input
-                    className="p-2 border border-gray-300 rounded max-w-50"
+                    className="flex-1 p-2 border border-gray-300 rounded"
                     type="text"
                     id="img-url"
                     placeholder="Dán URL ảnh ở đây..."
@@ -84,18 +89,23 @@ export default function ImageForm({ urlList, setUrlList }) {
                 )}
                 <input type="submit" hidden />
             </form>
-            <button className="block">
-                <label className="bg-blue-500 hover:bg-blue-700 text-white font-bold p-2 rounded">
-                    Import
-                    <input
-                        type="file"
-                        accept=".jpg, .jpeg, .png"
-                        multiple
-                        hidden
-                        onChange={(e) => handleChangeFileInput(e)}
-                    />
+            <div>
+                <label
+                    htmlFor="upload-card"
+                    className="p-2 flex justify-center items-center border border-gray-300 rounded ml-2 cursor-pointer hover:bg-gray-200"
+                >
+                    <Upload className="m-auto" />
                 </label>
-            </button>
+                <input
+                    id="upload-card"
+                    type="file"
+                    accept=".jpg, .jpeg, .png"
+                    className="hidden"
+                    multiple
+                    hidden
+                    onChange={(e) => handleChangeFileInput(e)}
+                />
+            </div>
         </div>
     );
 }
