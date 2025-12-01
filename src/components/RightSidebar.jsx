@@ -228,7 +228,7 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
                   className="w-full h-full object-cover"
                   loading="lazy"
                 />
-                <div className="absolute top-1/2 bottom-0 left-0 right-0 bg-black group-hover:bg-[#00000099] transition-all flex flex-col items-center justify-center opacity-0 group-hover:opacity-100">
+                <div className="absolute top-1/2 bottom-0 left-0 right-0 bg-[#00000099] transition-all flex flex-col items-center justify-center md:opacity-0 group-hover:opacity-100">
                   <button
                     onClick={() => handleAddImage(item.imageUrl)}
                     className="bg-green-500 text-white text-sm p-2 rounded-full hover:bg-green-600 mb-2 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1"
@@ -262,7 +262,7 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
           {results.length > 0 && (
             <button
               onClick={handleViewMore}
-              className="w-full mt-2 py-2 text-white bg-blue-600 rounded border border-gray-300 hover:bg-blue-700 transition-colors"
+              className="w-full mt-2 py-2 text-white bg-blue-600 rounded border border-gray-300 hover:bg-blue-700 transition-colors mt-4 mb-2"
             >
               Xem thêm
             </button>
