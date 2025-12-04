@@ -42,7 +42,7 @@ export default function SortableCard({
       <div
         {...attributes}
         {...listeners}
-        className="absolute top-1 right-1 bg-white/80 p-1 rounded-full cursor-grab active:cursor-grabbing hover:bg-white z-10 touch-none"
+        className="absolute top-1 left-1 bg-white/80 p-1 rounded-full cursor-grab active:cursor-grabbing hover:bg-white z-10 touch-none"
         // Ngăn chặn sự kiện chạm lan ra ngoài (để không kích hoạt context menu khi đang kéo)
         onContextMenu={(e) => e.stopPropagation()}
       >

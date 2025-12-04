@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 import MainContent from "@/components/MainContent";
 import RightSidebar from "@/components/RightSidebar";
-import { ListIndentDecrease, ListIndentIncrease } from "lucide-react";
 
 export default function App() {
   const [urlList, setUrlList] = useState([]);
