@@ -4,11 +4,14 @@ import {
   Search,
   ListIndentIncrease,
   ListIndentDecrease,
+  Plus,
+  Loader2,
 } from "lucide-react";
 import {
   fetchImagesFromDeviantArt,
   fetchCardInfoFromYGOPRODeck,
 } from "@/services/cardService";
+import { createYgoprodeckImageProxyUrl } from "@/services/ygoprodeckImport.mjs";
 
 export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
   const [query, setQuery] = useState("");
@@ -19,6 +22,8 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [activeTab, setActiveTab] = useState("ygoprodeck");
   const [sourceError, setSourceError] = useState(null);
+  // Set of card IDs đang loading (mỗi card có spinner riêng)
+  const [loadingCardIds, setLoadingCardIds] = useState(new Set());
 
   // Ref để xử lý debounce
   const debounceTimeoutRef = useRef(null);
@@ -150,6 +155,45 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
     setUrlList((prev) => [...prev, url]);
   };
 
+  // Fetch ảnh YGOPRODeck qua proxy → data URL → thêm vào urlList
+  const handleAddYgoproImage = async (card) => {
+    const imageUrl = card.card_images[0].image_url;
+    const cardId = card.id;
+
+    setLoadingCardIds((prev) => new Set([...prev, cardId]));
+    try {
+      const mode = import.meta.env.DEV ? "development" : "production";
+      const productionProxyTemplate =
+        import.meta.env.VITE_YGOPRO_IMAGE_PROXY_URL || "";
+      const proxyUrl = createYgoprodeckImageProxyUrl(imageUrl, {
+        mode,
+        productionProxyTemplate,
+      });
+
+      const response = await fetch(proxyUrl);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const blob = await response.blob();
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+      });
+
+      setUrlList((prev) => [...prev, dataUrl]);
+    } catch (err) {
+      console.error("Failed to add ygoprodeck image:", err);
+      alert(`Không thể tải ảnh: ${err.message}`);
+    } finally {
+      setLoadingCardIds((prev) => {
+        const next = new Set(prev);
+        next.delete(cardId);
+        return next;
+      });
+    }
+  };
+
   return (
     <>
       {/* --- Mobile Backdrop (Lớp phủ mờ khi mở trên mobile) --- */}
@@ -267,10 +311,21 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
                     />
                     <div className="absolute top-1/2 bottom-0 left-0 right-0 bg-[#00000099] transition-all flex flex-col items-center justify-center md:opacity-0 group-hover:opacity-100">
                       <button
-                        disabled={true}
-                        className="text-yellow-400 italic text-sm p-2 rounded-full mb-2 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1 disabled:cursor-not-allowed"
+                        onClick={() => handleAddYgoproImage(card)}
+                        disabled={loadingCardIds.has(card.id)}
+                        className="bg-green-500 text-white text-sm px-3 py-1.5 rounded-full mb-2 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
                       >
-                        Hãy copy paste thủ công
+                        {loadingCardIds.has(card.id) ? (
+                          <>
+                            <Loader2 size={14} className="animate-spin" />
+                            Đang tải...
+                          </>
+                        ) : (
+                          <>
+                            <Plus size={14} />
+                            Thêm ảnh
+                          </>
+                        )}
                       </button>
                       <a
                         href={card.ygoprodeck_url}
