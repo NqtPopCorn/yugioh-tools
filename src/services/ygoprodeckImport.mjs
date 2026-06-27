@@ -1,5 +1,7 @@
 const REQUEST_DELAY_MS = 100;
-const API_BASE = "/ygoprodeck-api/cardinfo.php";
+const API_BASE =
+  import.meta.env?.VITE_YGOPRO_API_BASE ||
+  "/ygoprodeck-api/cardinfo.php";
 const IMAGE_HOST = "https://images.ygoprodeck.com";
 
 const normalizeLookupKey = (item) =>
