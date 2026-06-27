@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { getCardPlacements } from "./printLayout.mjs";
 
 export const exportPDF = async (urlList, cardDimensions) => {
     if (urlList.length === 0) {
@@ -30,26 +31,20 @@ export const exportPDF = async (urlList, cardDimensions) => {
 
     const cardW = cardDimensions.width;
     const cardH = cardDimensions.height;
-    const gap = 0;
-    let x = 10,
-        y = 10;
+    const placements = getCardPlacements(urlList.length, cardDimensions);
+    let currentPage = 0;
 
     try {
         for (let i = 0; i < urlList.length; i++) {
+            const placement = placements[i];
             const img = await loadImage(urlList[i]);
-            pdf.addImage(img, "JPEG", x, y, cardW, cardH);
-            x += cardW + gap;
 
-            if (x + cardW > 210) {
-                x = 10;
-                y += cardH + gap;
-            }
-
-            if (y + cardH > 297 && urlList.length % 9 !== 0) {
+            while (placement.page > currentPage) {
                 pdf.addPage();
-                x = 10;
-                y = 10;
+                currentPage += 1;
             }
+
+            pdf.addImage(img, "JPEG", placement.x, placement.y, cardW, cardH);
         }
         pdf.save("yugioh-cards.pdf");
     } catch (error) {

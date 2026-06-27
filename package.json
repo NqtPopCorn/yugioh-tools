@@ -2,6 +2,7 @@
   "name": "yugioh-tools",
   "version": "1.0.0",
   "description": "Deploy React App",
+  "type": "module",
   "main": "index.js",
   "homepage": "https://nqtpopcorn.github.io/yugioh-tools",
   "scripts": {

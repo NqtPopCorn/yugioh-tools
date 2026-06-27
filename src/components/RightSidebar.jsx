@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import {
-  Plus,
   Search,
   ListIndentIncrease,
   ListIndentDecrease,
@@ -19,6 +18,7 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [activeTab, setActiveTab] = useState("ygoprodeck");
+  const [sourceError, setSourceError] = useState(null);
 
   // Ref để xử lý debounce
   const debounceTimeoutRef = useRef(null);
@@ -71,6 +71,7 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
 
     setShowSuggestions(false);
     setIsLoading(true);
+    setSourceError(null);
     if (activeTab === "deviantart") {
       setDenviantArtResults([]);
     } else if (activeTab === "ygoprodeck") {
@@ -89,6 +90,14 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
       }
     } catch (error) {
       console.error("Error fetching data:", error);
+      if (error.code === "DEVIANTART_UNAVAILABLE") {
+        setSourceError({
+          message:
+            "DeviantArt dang chan nguon RSS tim kiem, nen app chua the tu lay anh tu nguon nay.",
+          searchUrl: error.searchUrl,
+        });
+        return;
+      }
       alert(
         `Lỗi khi tải dữ liệu từ ${
           activeTab === "deviantart" ? "DeviantArt" : "YGOProDeck"
@@ -102,6 +111,7 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
 
   const handleViewMore = async () => {
     try {
+      setSourceError(null);
       if (activeTab === "deviantart") {
         const moreResults = await fetchImagesFromDeviantArt(
           query,
@@ -120,6 +130,13 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
       }
     } catch (error) {
       console.error("Error loading more:", error);
+      if (error.code === "DEVIANTART_UNAVAILABLE") {
+        setSourceError({
+          message:
+            "DeviantArt dang chan nguon RSS tim kiem, nen app chua the tu lay them anh tu nguon nay.",
+          searchUrl: error.searchUrl,
+        });
+      }
     }
   };
 
@@ -291,6 +308,21 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
           {/* Deviantart Tab Content */}
           {activeTab === "deviantart" && (
             <>
+              {sourceError && (
+                <div className="mb-3 rounded border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-900">
+                  <p>{sourceError.message}</p>
+                  {sourceError.searchUrl && (
+                    <a
+                      href={sourceError.searchUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 inline-block font-semibold text-yellow-800 underline"
+                    >
+                      Mo DeviantArt search
+                    </a>
+                  )}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-2">
                 {denviantArtResults.map((item, index) => (
                   <div

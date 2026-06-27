@@ -7,20 +7,33 @@ import RightSidebar from "@/components/RightSidebar";
 export default function App() {
   const [urlList, setUrlList] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(null);
-  const [cardDimensions, setCardDimensions] = useState({
-    width: 59,
-    height: 86,
+  const [cardDimensions, setCardDimensions] = useState(() => {
+    try {
+      const saved = localStorage.getItem("yugiohCardDimensions");
+      return saved ? JSON.parse(saved) : { width: 59, height: 86 };
+    } catch {
+      return { width: 59, height: 86 };
+    }
   });
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
 
   // Load saved URLs from localStorage on component mount
   useEffect(() => {
-    const savedUrls = localStorage.getItem("yugiohCardUrls");
-    if (savedUrls) {
-      const parsedUrls = JSON.parse(savedUrls);
-      setUrlList(parsedUrls);
-    }
+    try {
+      const savedUrls = localStorage.getItem("yugiohCardUrls");
+      if (savedUrls) setUrlList(JSON.parse(savedUrls));
+    } catch { /* ignore parse errors */ }
   }, []);
+
+  // Auto-save urlList to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("yugiohCardUrls", JSON.stringify(urlList));
+  }, [urlList]);
+
+  // Auto-save cardDimensions to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("yugiohCardDimensions", JSON.stringify(cardDimensions));
+  }, [cardDimensions]);
 
   // Handle paste from clipboard
   useEffect(() => {
