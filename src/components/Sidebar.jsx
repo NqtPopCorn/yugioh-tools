@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react"; // Cần cài lucide-react nếu chưa có
 import HelpTooltip from "./HelpTooltip";
 import ImageForm from "./ImageForm";
+import DeckImportForm from "./DeckImportForm";
 import ActionButtons from "./ActionButtons";
 import CardSizeSettings from "./CardSizeSettings";
 import { exportPDF } from "../services/print";
@@ -56,6 +57,8 @@ export default function Sidebar({
         <p className="text-gray-500 text-sm italic text-center mb-2">
           Hoặc dán ảnh từ clipboard
         </p>
+
+        <DeckImportForm setUrlList={setUrlList} />
 
         {/* Phần mở rộng: Settings, Actions, Export */}
         {/* Logic: Ẩn trên mobile trừ khi được expand. Luôn hiện trên Desktop (md:block) */}
