@@ -9,5 +9,19 @@ export default defineConfig({
       "@": "/src",
     },
   },
+  server: {
+    proxy: {
+      "/ygoprodeck-api": {
+        target: "https://db.ygoprodeck.com/api/v7",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ygoprodeck-api/, ""),
+      },
+      "/ygoprodeck-image": {
+        target: "https://images.ygoprodeck.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ygoprodeck-image/, ""),
+      },
+    },
+  },
   base: "/yugioh-tools/",
 });
