@@ -6,12 +6,14 @@ import {
   ListIndentDecrease,
   Plus,
   Loader2,
+  ZoomIn,
 } from "lucide-react";
 import {
   fetchImagesFromDeviantArt,
   fetchCardInfoFromYGOPRODeck,
 } from "@/services/cardService";
 import { createYgoprodeckImageProxyUrl } from "@/services/ygoprodeckImport.mjs";
+import ImageLightbox from "./ImageLightbox";
 
 export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
   const [query, setQuery] = useState("");
@@ -24,6 +26,10 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
   const [sourceError, setSourceError] = useState(null);
   // Set of card IDs đang loading (mỗi card có spinner riêng)
   const [loadingCardIds, setLoadingCardIds] = useState(new Set());
+
+  // Lightbox state
+  const [lightboxSrc, setLightboxSrc] = useState(null);
+  const [lightboxAlt, setLightboxAlt] = useState("");
 
   // Ref để xử lý debounce
   const debounceTimeoutRef = useRef(null);
@@ -311,7 +317,14 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
                     />
                     <div className="absolute top-1/2 bottom-0 left-0 right-0 bg-[#00000099] transition-all flex flex-col items-center justify-center md:opacity-0 group-hover:opacity-100">
                       <button
-                        onClick={() => handleAddYgoproImage(card)}
+                        onClick={(e) => { e.stopPropagation(); setLightboxSrc(card.card_images[0].image_url); setLightboxAlt(card.name); }}
+                        className="bg-white/20 hover:bg-white/30 text-white text-sm px-3 py-1.5 rounded-full mb-1.5 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1"
+                      >
+                        <ZoomIn size={14} />
+                        Preview
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleAddYgoproImage(card); }}
                         disabled={loadingCardIds.has(card.id)}
                         className="bg-green-500 text-white text-sm px-3 py-1.5 rounded-full mb-2 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
                       >
@@ -392,7 +405,14 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
                     />
                     <div className="absolute top-1/2 bottom-0 left-0 right-0 bg-[#00000099] transition-all flex flex-col items-center justify-center md:opacity-0 group-hover:opacity-100">
                       <button
-                        onClick={() => handleAddImage(item.imageUrl)}
+                        onClick={(e) => { e.stopPropagation(); setLightboxSrc(item.imageUrl); setLightboxAlt(item.title); }}
+                        className="bg-white/20 hover:bg-white/30 text-white text-sm px-3 py-1.5 rounded-full mb-1.5 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1"
+                      >
+                        <ZoomIn size={14} />
+                        Preview
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleAddImage(item.imageUrl); }}
                         className="bg-green-500 text-white text-sm p-2 rounded-full hover:bg-green-600 mb-2 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1"
                       >
                         Add{" "}
@@ -445,6 +465,14 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
         >
           <ListIndentDecrease size={24} />
         </button>
+      )}
+      {/* Lightbox */}
+      {lightboxSrc && (
+        <ImageLightbox
+          src={lightboxSrc}
+          alt={lightboxAlt}
+          onClose={() => setLightboxSrc(null)}
+        />
       )}
     </>
   );

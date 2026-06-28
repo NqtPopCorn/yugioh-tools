@@ -1,6 +1,7 @@
 "use client";
 const formatSizes = {
   "59x86": { width: 59, height: 86 },
+  "59x86-fit": { width: 62, height: 90 },
 };
 
 export default function CardSizeSettings({
@@ -76,7 +77,7 @@ export default function CardSizeSettings({
         id="cardFormat"
         className="w-full p-1 border border-gray-300 rounded col-span-2"
         onChange={handleFormatChange}
-        defaultValue="59x86"
+        defaultValue="59x86-fit"
       >
         <option value="59x86">59x86</option>
         <option value="59x86-fit">59x86-fit</option>

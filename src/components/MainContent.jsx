@@ -20,6 +20,7 @@ import {
 
 import ContextMenu from "./ContextMenu";
 import SortableCard from "./SortableCard";
+import ImageLightbox from "./ImageLightbox";
 
 export default function MainContent({
   urlList,
@@ -50,6 +51,15 @@ export default function MainContent({
       });
     }
   };
+
+  // Lightbox state
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const openLightbox = (index) => setLightboxIndex(index);
+  const closeLightbox = () => setLightboxIndex(null);
+  const prevLightbox = () =>
+    setLightboxIndex((i) => (i > 0 ? i - 1 : urlList.length - 1));
+  const nextLightbox = () =>
+    setLightboxIndex((i) => (i < urlList.length - 1 ? i + 1 : 0));
 
   // Logic Context Menu (Chuột phải) chuyển từ DOM listener sang React Handler
   const handleContextMenu = (e, index) => {
@@ -121,6 +131,7 @@ export default function MainContent({
                 onContextMenu={handleContextMenu}
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
+                onPreview={openLightbox}
               />
             ))}
           </div>
@@ -132,6 +143,18 @@ export default function MainContent({
         selectedIndex={selectedIndex}
         setSelectedIndex={setSelectedIndex}
       />
+
+      {/* Lightbox */}
+      {lightboxIndex !== null && (
+        <ImageLightbox
+          src={urlList[lightboxIndex]}
+          alt={`Card ${lightboxIndex + 1}`}
+          onClose={closeLightbox}
+          onPrev={urlList.length > 1 ? prevLightbox : undefined}
+          onNext={urlList.length > 1 ? nextLightbox : undefined}
+          counter={`${lightboxIndex + 1} / ${urlList.length}`}
+        />
+      )}
     </div>
   );
 }

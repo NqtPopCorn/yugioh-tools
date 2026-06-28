@@ -10,9 +10,9 @@ export default function App() {
   const [cardDimensions, setCardDimensions] = useState(() => {
     try {
       const saved = localStorage.getItem("yugiohCardDimensions");
-      return saved ? JSON.parse(saved) : { width: 59, height: 86 };
+      return saved ? JSON.parse(saved) : { width: 62, height: 90 };
     } catch {
-      return { width: 59, height: 86 };
+      return { width: 62, height: 90 };
     }
   });
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);

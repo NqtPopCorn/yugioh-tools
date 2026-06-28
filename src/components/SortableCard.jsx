@@ -1,6 +1,6 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react"; // Cài lucide-react hoặc dùng icon fontawesome
+import { GripVertical, ZoomIn } from "lucide-react"; // Cài lucide-react hoặc dùng icon fontawesome
 
 export default function SortableCard({
   url,
@@ -8,6 +8,7 @@ export default function SortableCard({
   onContextMenu,
   onTouchStart,
   onTouchEnd,
+  onPreview,
 }) {
   const {
     attributes,
@@ -50,6 +51,19 @@ export default function SortableCard({
         <GripVertical size={16} className="text-gray-600" />
       </div>
       {/* ------------------- */}
+
+      {/* --- Preview Button (zoom icon, hiện khi hover) --- */}
+      {onPreview && (
+        <button
+          className="absolute top-1 right-1 bg-white/80 hover:bg-white p-1 rounded-full z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => { e.stopPropagation(); onPreview(index); }}
+          onContextMenu={(e) => e.stopPropagation()}
+          title="Xem toàn màn hình"
+        >
+          <ZoomIn size={16} className="text-gray-700" />
+        </button>
+      )}
     </div>
   );
 }
+
