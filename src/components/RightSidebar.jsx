@@ -5,7 +5,6 @@ import {
   ListIndentIncrease,
   ListIndentDecrease,
   Plus,
-  Loader2,
   ZoomIn,
 } from "lucide-react";
 import {
@@ -24,8 +23,6 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [activeTab, setActiveTab] = useState("ygoprodeck");
   const [sourceError, setSourceError] = useState(null);
-  // Set of card IDs đang loading (mỗi card có spinner riêng)
-  const [loadingCardIds, setLoadingCardIds] = useState(new Set());
 
   // Lightbox state
   const [lightboxSrc, setLightboxSrc] = useState(null);
@@ -161,42 +158,21 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
     setUrlList((prev) => [...prev, url]);
   };
 
-  // Fetch ảnh YGOPRODeck qua proxy → data URL → thêm vào urlList
-  const handleAddYgoproImage = async (card) => {
+  // Thêm ảnh YGOPRODeck qua proxy URL (không convert base64 → tránh tràn localStorage)
+  const handleAddYgoproImage = (card) => {
     const imageUrl = card.card_images[0].image_url;
-    const cardId = card.id;
-
-    setLoadingCardIds((prev) => new Set([...prev, cardId]));
+    const mode = import.meta.env.DEV ? "development" : "production";
+    const productionProxyTemplate =
+      import.meta.env.VITE_YGOPRO_IMAGE_PROXY_URL || "";
     try {
-      const mode = import.meta.env.DEV ? "development" : "production";
-      const productionProxyTemplate =
-        import.meta.env.VITE_YGOPRO_IMAGE_PROXY_URL || "";
       const proxyUrl = createYgoprodeckImageProxyUrl(imageUrl, {
         mode,
         productionProxyTemplate,
       });
-
-      const response = await fetch(proxyUrl);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const blob = await response.blob();
-      const dataUrl = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(blob);
-      });
-
-      setUrlList((prev) => [...prev, dataUrl]);
+      setUrlList((prev) => [...prev, proxyUrl]);
     } catch (err) {
-      console.error("Failed to add ygoprodeck image:", err);
-      alert(`Không thể tải ảnh: ${err.message}`);
-    } finally {
-      setLoadingCardIds((prev) => {
-        const next = new Set(prev);
-        next.delete(cardId);
-        return next;
-      });
+      console.error("Failed to build proxy URL:", err);
+      alert(`Không thể tạo proxy URL: ${err.message}`);
     }
   };
 
@@ -325,20 +301,10 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleAddYgoproImage(card); }}
-                        disabled={loadingCardIds.has(card.id)}
-                        className="bg-green-500 text-white text-sm px-3 py-1.5 rounded-full mb-2 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+                        className="bg-green-500 text-white text-sm px-3 py-1.5 rounded-full mb-2 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1"
                       >
-                        {loadingCardIds.has(card.id) ? (
-                          <>
-                            <Loader2 size={14} className="animate-spin" />
-                            Đang tải...
-                          </>
-                        ) : (
-                          <>
-                            <Plus size={14} />
-                            Thêm ảnh
-                          </>
-                        )}
+                        <Plus size={14} />
+                        Thêm ảnh
                       </button>
                       <a
                         href={card.ygoprodeck_url}

@@ -22,13 +22,15 @@ export const createYgoprodeckImageProxyUrl = (
   imageUrl,
   { mode = "production", productionProxyTemplate = "" } = {}
 ) => {
+  // Nếu có proxy template (kể cả local CF Worker dev), dùng nó trước
+  if (productionProxyTemplate) {
+    return productionProxyTemplate.replace("{url}", encodeURIComponent(imageUrl));
+  }
+  // Fallback dev: dùng Vite proxy (không cần template)
   if (mode === "development" && imageUrl.startsWith(IMAGE_HOST)) {
     return imageUrl.replace(IMAGE_HOST, "/ygoprodeck-image");
   }
-  if (!productionProxyTemplate) {
-    throw new Error("Image proxy is not configured.");
-  }
-  return productionProxyTemplate.replace("{url}", encodeURIComponent(imageUrl));
+  throw new Error("Image proxy is not configured.");
 };
 
 const defaultBlobToDataUrl = (blob) =>
@@ -72,22 +74,15 @@ export const createYgoprodeckImporter = ({
     return card;
   };
 
-  const materializeImage = async (imageUrl) => {
+  const materializeImage = (imageUrl) => {
     if (imageCache.has(imageUrl)) return imageCache.get(imageUrl);
     const proxyUrl = createYgoprodeckImageProxyUrl(imageUrl, {
       mode,
       productionProxyTemplate,
     });
-    const response = await fetcher(proxyUrl);
-    if (!response.ok) {
-      throw new Error("Image proxy request failed.");
-    }
-    const dataUrl = await blobToDataUrl(await response.blob());
-    if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) {
-      throw new Error("Image proxy did not return a usable image.");
-    }
-    imageCache.set(imageUrl, dataUrl);
-    return dataUrl;
+    // Lưu proxy URL (không fetch blob → tránh base64 tạo ra lừ, đầy localStorage)
+    imageCache.set(imageUrl, proxyUrl);
+    return proxyUrl;
   };
 
   const importCards = async (items, { onProgress } = {}) => {
@@ -128,7 +123,7 @@ export const createYgoprodeckImporter = ({
           continue;
         }
 
-        const dataUrl = await materializeImage(imageUrl);
+        const dataUrl = materializeImage(imageUrl);
         for (let i = 0; i < item.quantity; i += 1) {
           urls.push(dataUrl);
         }

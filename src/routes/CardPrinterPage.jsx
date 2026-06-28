@@ -5,7 +5,14 @@ import MainContent from "@/components/MainContent";
 import RightSidebar from "@/components/RightSidebar";
 
 export default function App() {
-  const [urlList, setUrlList] = useState([]);
+  const [urlList, setUrlList] = useState(() => {
+    try {
+      const saved = localStorage.getItem("yugiohCardUrls");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [cardDimensions, setCardDimensions] = useState(() => {
     try {
@@ -17,17 +24,16 @@ export default function App() {
   });
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
 
-  // Load saved URLs from localStorage on component mount
-  useEffect(() => {
-    try {
-      const savedUrls = localStorage.getItem("yugiohCardUrls");
-      if (savedUrls) setUrlList(JSON.parse(savedUrls));
-    } catch { /* ignore parse errors */ }
-  }, []);
 
   // Auto-save urlList to localStorage whenever it changes
+  // Chỉ lưu HTTP/HTTPS URLs, bỏ qua base64 (data:image/) để tránh tràn quota
   useEffect(() => {
-    localStorage.setItem("yugiohCardUrls", JSON.stringify(urlList));
+    try {
+      const saveable = urlList.filter((url) => !url.startsWith("data:"));
+      localStorage.setItem("yugiohCardUrls", JSON.stringify(saveable));
+    } catch {
+      // ignore quota errors
+    }
   }, [urlList]);
 
   // Auto-save cardDimensions to localStorage whenever it changes

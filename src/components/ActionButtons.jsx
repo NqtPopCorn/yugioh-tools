@@ -41,12 +41,16 @@ export default function ActionButtons({ urlList, setUrlList }) {
 
     const handleSaveLocal = () => {
         try {
-            localStorage.setItem("yugiohCardUrls", JSON.stringify(urlList));
-            alert("Đã lưu thành công vào Local Storage!");
+            const saveable = urlList.filter((url) => !url.startsWith("data:"));
+            localStorage.setItem("yugiohCardUrls", JSON.stringify(saveable));
+            const skipped = urlList.length - saveable.length;
+            if (skipped > 0) {
+                alert(`Đã lưu ${saveable.length} thẻ. (${skipped} thẻ dùng ảnh paste/upload không thể lưu link, sẽ mất khi reload)`);
+            } else {
+                alert("Đã lưu thành công vào Local Storage!");
+            }
         } catch (error) {
-            alert(
-                "Không thể lưu local nhiều 'ảnh được dán trực tiếp', hãy thử bằng đường dẫn hoặc xuất PDF để lưu lại các thẻ của bạn."
-            );
+            alert("Không thể lưu local. Hãy thử xuất PDF để lưu lại các thẻ.");
         }
     };
 
