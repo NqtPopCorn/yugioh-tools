@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Search,
   ListIndentIncrease,
@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import {
   fetchImagesFromDeviantArt,
-  fetchCardInfoFromYGOPRODeck,
+  searchCardsFromYGOPRODeck,
 } from "@/services/cardService";
 import { createYgoprodeckImageProxyUrl } from "@/services/ygoprodeckImport.mjs";
 import ImageLightbox from "./ImageLightbox";
@@ -19,7 +19,11 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
   const [suggestions, setSuggestions] = useState([]);
   const [denviantArtResults, setDenviantArtResults] = useState([]);
   const [ygoproResults, setYgoproResults] = useState([]);
+  const [ygoproPaging, setYgoproPaging] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreYgopro, setHasMoreYgopro] = useState(true);
+  const [hasMoreDeviantArt, setHasMoreDeviantArt] = useState(true);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [activeTab, setActiveTab] = useState("ygoprodeck");
   const [sourceError, setSourceError] = useState(null);
@@ -28,9 +32,11 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
   const [lightboxSrc, setLightboxSrc] = useState(null);
   const [lightboxAlt, setLightboxAlt] = useState("");
 
-  // Ref để xử lý debounce
+  // Ref để xử lý debounce, observer, and fetching lock
   const debounceTimeoutRef = useRef(null);
   const wrapperRef = useRef(null);
+  const observerTargetRef = useRef(null);
+  const isFetchingRef = useRef(false);
 
   // --- LOGIC 1: Autocomplete (YGOPRODeck API) ---
   useEffect(() => {
@@ -44,12 +50,18 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
 
     debounceTimeoutRef.current = setTimeout(async () => {
       try {
-        const data = await fetchCardInfoFromYGOPRODeck(query, 5, 0);
-        if (data.data) {
-          setSuggestions(data.data);
+        const res = await searchCardsFromYGOPRODeck(query, {
+          num: 6,
+          sort: "new",
+        });
+        if (res.cards && res.cards.length > 0) {
+          setSuggestions(res.cards);
           setShowSuggestions(true);
+        } else {
+          setSuggestions([]);
         }
       } catch (error) {
+        console.error("Autocomplete error:", error);
         setSuggestions([]);
       }
     }, 300);
@@ -74,27 +86,42 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
   }, [activeTab]);
 
   // --- LOGIC 2: Tìm kiếm DeviantArt và YGOProDeck ---
-  const handleSearch = async (query) => {
-    if (!query) return;
+  const handleSearch = async (searchQuery) => {
+    const term = typeof searchQuery === "string" ? searchQuery : query;
+    if (!term || !term.trim()) return;
 
     setShowSuggestions(false);
     setIsLoading(true);
+    setIsLoadingMore(false);
     setSourceError(null);
+
     if (activeTab === "deviantart") {
       setDenviantArtResults([]);
+      setHasMoreDeviantArt(true);
     } else if (activeTab === "ygoprodeck") {
       setYgoproResults([]);
+      setYgoproPaging(null);
+      setHasMoreYgopro(true);
     }
 
     try {
       if (activeTab === "deviantart") {
-        const res = await fetchImagesFromDeviantArt(query, 0);
-        setDenviantArtResults(res);
+        const res = await fetchImagesFromDeviantArt(term.trim(), 0);
+        setDenviantArtResults(res || []);
+        setHasMoreDeviantArt((res?.length || 0) >= 20);
       } else if (activeTab === "ygoprodeck") {
-        const data = await fetchCardInfoFromYGOPRODeck(query, 20, 0);
-        if (data.data) {
-          setYgoproResults(data.data);
-        }
+        const res = await searchCardsFromYGOPRODeck(term.trim(), {
+          num: 18,
+          offset: 0,
+          sort: "new",
+        });
+        setYgoproResults(res.cards || []);
+        setYgoproPaging(res.paging || null);
+        setHasMoreYgopro(
+          res.paging
+            ? res.paging.rows_remaining > 0
+            : (res.cards?.length || 0) >= 18
+        );
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -117,36 +144,96 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
     }
   };
 
-  const handleViewMore = async () => {
-    try {
-      setSourceError(null);
-      if (activeTab === "deviantart") {
+  // --- LOGIC 3: Infinite Scroll Load More ---
+  const loadMore = useCallback(async () => {
+    if (isLoading || isLoadingMore || isFetchingRef.current) return;
+    if (!query || !query.trim()) return;
+
+    if (activeTab === "ygoprodeck") {
+      if (!hasMoreYgopro) return;
+      isFetchingRef.current = true;
+      setIsLoadingMore(true);
+      try {
+        const offset = ygoproPaging?.next_page_offset ?? ygoproResults.length;
+        const res = await searchCardsFromYGOPRODeck(query.trim(), {
+          num: 18,
+          offset,
+          sort: "new",
+        });
+        if (res.cards && res.cards.length > 0) {
+          setYgoproResults((prev) => [...prev, ...res.cards]);
+          setYgoproPaging(res.paging || null);
+          if (res.paging && res.paging.rows_remaining === 0) {
+            setHasMoreYgopro(false);
+          }
+        } else {
+          setHasMoreYgopro(false);
+        }
+      } catch (error) {
+        console.error("Error loading more YGOProDeck cards:", error);
+        setHasMoreYgopro(false);
+      } finally {
+        setIsLoadingMore(false);
+        isFetchingRef.current = false;
+      }
+    } else if (activeTab === "deviantart") {
+      if (!hasMoreDeviantArt) return;
+      isFetchingRef.current = true;
+      setIsLoadingMore(true);
+      try {
         const moreResults = await fetchImagesFromDeviantArt(
-          query,
+          query.trim(),
           denviantArtResults.length
         );
-        setDenviantArtResults((prev) => [...prev, ...moreResults]);
-      } else if (activeTab === "ygoprodeck") {
-        const data = await fetchCardInfoFromYGOPRODeck(
-          query,
-          20,
-          ygoproResults.length
-        );
-        if (data.data) {
-          setYgoproResults((prev) => [...prev, ...data.data]);
+        if (moreResults && moreResults.length > 0) {
+          setDenviantArtResults((prev) => [...prev, ...moreResults]);
+          if (moreResults.length < 20) {
+            setHasMoreDeviantArt(false);
+          }
+        } else {
+          setHasMoreDeviantArt(false);
         }
-      }
-    } catch (error) {
-      console.error("Error loading more:", error);
-      if (error.code === "DEVIANTART_UNAVAILABLE") {
-        setSourceError({
-          message:
-            "DeviantArt dang chan nguon RSS tim kiem, nen app chua the tu lay them anh tu nguon nay.",
-          searchUrl: error.searchUrl,
-        });
+      } catch (error) {
+        console.error("Error loading more DeviantArt images:", error);
+        setHasMoreDeviantArt(false);
+      } finally {
+        setIsLoadingMore(false);
+        isFetchingRef.current = false;
       }
     }
-  };
+  }, [
+    isLoading,
+    isLoadingMore,
+    query,
+    activeTab,
+    hasMoreYgopro,
+    hasMoreDeviantArt,
+    ygoproPaging,
+    ygoproResults.length,
+    denviantArtResults.length,
+  ]);
+
+  // IntersectionObserver to trigger infinite scroll
+  useEffect(() => {
+    const target = observerTargetRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "300px",
+        threshold: 0.01,
+      }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   const selectSuggestion = (name) => {
     setQuery(name);
@@ -251,7 +338,7 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
         </div>
 
         {/* Tab Switching UI */}
-        <div className="flex border-b border-gray-200 bg-white">
+        <div className="flex border-b border-gray-200 bg-white p-2">
           <button
             onClick={() => setActiveTab("ygoprodeck")}
             className={`flex-1 py-3 text-sm font-semibold transition-colors ${
@@ -282,7 +369,7 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
               <div className="grid grid-cols-2 gap-2">
                 {ygoproResults.map((card, index) => (
                   <div
-                    key={index}
+                    key={`${card.id}-${index}`}
                     className="group relative bg-white rounded shadow overflow-hidden aspect-[59/86]"
                   >
                     <img
@@ -293,48 +380,73 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
                     />
                     <div className="absolute top-1/2 bottom-0 left-0 right-0 bg-[#00000099] transition-all flex flex-col items-center justify-center md:opacity-0 group-hover:opacity-100">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setLightboxSrc(card.card_images[0].image_url); setLightboxAlt(card.name); }}
-                        className="bg-white/20 hover:bg-white/30 text-white text-sm px-3 py-1.5 rounded-full mb-1.5 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLightboxSrc(card.card_images[0].image_url);
+                          setLightboxAlt(card.name);
+                        }}
+                        className="bg-white/20 hover:bg-white/30 text-white text-sm px-3 py-1.5 rounded-full mb-1.5 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1 cursor-pointer"
                       >
                         <ZoomIn size={14} />
                         Preview
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleAddYgoproImage(card); }}
-                        className="bg-green-500 text-white text-sm px-3 py-1.5 rounded-full mb-2 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddYgoproImage(card);
+                        }}
+                        className="bg-green-500 text-white text-sm px-3 py-1.5 rounded-full mb-2 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1 cursor-pointer"
                       >
                         <Plus size={14} />
                         Thêm ảnh
                       </button>
-                      <a
-                        href={card.ygoprodeck_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-white text-xs hover:underline px-2 py-1 rounded"
-                      >
-                        Xem gốc
-                      </a>
+                      {card.ygoprodeck_url && (
+                        <a
+                          href={card.ygoprodeck_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-white text-xs hover:underline px-2 py-1 rounded"
+                        >
+                          Xem gốc
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
+
+              {/* Initial Loading */}
               {isLoading && (
-                <div className="text-center py-4 text-gray-500">
-                  Đang tải...
+                <div className="text-center py-6 text-gray-500 flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm">Đang tải...</span>
                 </div>
               )}
+
+              {/* No Results */}
               {!isLoading && ygoproResults.length === 0 && query && (
-                <p className="text-center text-sm text-gray-400 mt-4">
+                <p className="text-center text-sm text-gray-400 mt-6">
                   Chưa có kết quả.
                 </p>
               )}
-              {ygoproResults.length > 0 && (
-                <button
-                  onClick={handleViewMore}
-                  className="w-full mt-2 py-2 text-white bg-blue-600 rounded border border-gray-300 hover:bg-blue-700 transition-colors mt-4 mb-2"
-                >
-                  Xem thêm
-                </button>
+
+              {/* Infinite Scroll Sentinel & Loading More Indicator */}
+              {ygoproResults.length > 0 && hasMoreYgopro && (
+                <div ref={observerTargetRef} className="py-4 text-center">
+                  {isLoadingMore && (
+                    <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+                      <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                      <span>Đang tải thêm...</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* End of Results Indicator */}
+              {ygoproResults.length > 0 && !hasMoreYgopro && !isLoading && (
+                <p className="text-center text-xs text-gray-400 py-4">
+                  Đã hiển thị tất cả ({ygoproResults.length}) kết quả.
+                </p>
               )}
             </>
           )}
@@ -371,15 +483,22 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
                     />
                     <div className="absolute top-1/2 bottom-0 left-0 right-0 bg-[#00000099] transition-all flex flex-col items-center justify-center md:opacity-0 group-hover:opacity-100">
                       <button
-                        onClick={(e) => { e.stopPropagation(); setLightboxSrc(item.imageUrl); setLightboxAlt(item.title); }}
-                        className="bg-white/20 hover:bg-white/30 text-white text-sm px-3 py-1.5 rounded-full mb-1.5 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLightboxSrc(item.imageUrl);
+                          setLightboxAlt(item.title);
+                        }}
+                        className="bg-white/20 hover:bg-white/30 text-white text-sm px-3 py-1.5 rounded-full mb-1.5 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1 cursor-pointer"
                       >
                         <ZoomIn size={14} />
                         Preview
                       </button>
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleAddImage(item.imageUrl); }}
-                        className="bg-green-500 text-white text-sm p-2 rounded-full hover:bg-green-600 mb-2 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddImage(item.imageUrl);
+                        }}
+                        className="bg-green-500 text-white text-sm p-2 rounded-full hover:bg-green-600 mb-2 transform hover:scale-110 transition-transform shadow-lg flex items-center gap-1 cursor-pointer"
                       >
                         Add{" "}
                         <span>
@@ -398,23 +517,39 @@ export default function RightSidebar({ setUrlList, isOpen = true, setIsOpen }) {
                   </div>
                 ))}
               </div>
+
+              {/* Initial Loading */}
               {isLoading && (
-                <div className="text-center py-4 text-gray-500">
-                  Đang tải...
+                <div className="text-center py-6 text-gray-500 flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm">Đang tải...</span>
                 </div>
               )}
+
+              {/* No Results */}
               {!isLoading && denviantArtResults.length === 0 && query && (
-                <p className="text-center text-sm text-gray-400 mt-4">
+                <p className="text-center text-sm text-gray-400 mt-6">
                   Chưa có kết quả.
                 </p>
               )}
-              {denviantArtResults.length > 0 && (
-                <button
-                  onClick={handleViewMore}
-                  className="w-full mt-2 py-2 text-white bg-blue-600 rounded border border-gray-300 hover:bg-blue-700 transition-colors mt-4 mb-2"
-                >
-                  Xem thêm
-                </button>
+
+              {/* Infinite Scroll Sentinel & Loading More Indicator */}
+              {denviantArtResults.length > 0 && hasMoreDeviantArt && (
+                <div ref={observerTargetRef} className="py-4 text-center">
+                  {isLoadingMore && (
+                    <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+                      <div className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+                      <span>Đang tải thêm...</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* End of Results Indicator */}
+              {denviantArtResults.length > 0 && !hasMoreDeviantArt && !isLoading && (
+                <p className="text-center text-xs text-gray-400 py-4">
+                  Đã hiển thị tất cả ({denviantArtResults.length}) kết quả.
+                </p>
               )}
             </>
           )}

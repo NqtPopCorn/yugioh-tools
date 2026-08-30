@@ -103,17 +103,114 @@ export const fetchImagesFromDeviantArt = async (
   return parseDeviantArtRss(strXml);
 };
 
+export const normalizeSearchCard = (card) => {
+  if (!card) return null;
+  const id = card.id;
+  const imageUrl = `https://images.ygoprodeck.com/images/cards/${id}.jpg`;
+  const imageUrlSmall = `https://images.ygoprodeck.com/images/cards_small/${id}.jpg`;
+  const imageUrlCropped = `https://images.ygoprodeck.com/images/cards_cropped/${id}.jpg`;
+  const ygoprodeckUrl = card.pretty_url
+    ? `https://ygoprodeck.com/card/${card.pretty_url}`
+    : card.ygoprodeck_url || `https://ygoprodeck.com/card/?search=${id}`;
+
+  return {
+    ...card,
+    ygoprodeck_url: ygoprodeckUrl,
+    card_images:
+      card.card_images && card.card_images.length > 0
+        ? card.card_images
+        : [
+            {
+              id: id,
+              image_url: imageUrl,
+              image_url_small: imageUrlSmall,
+              image_url_cropped: imageUrlCropped,
+            },
+          ],
+  };
+};
+
+export const buildYgoprodeckSearchUrl = (
+  query,
+  {
+    num = 18,
+    offset = 0,
+    sort = "new",
+    apiBase = typeof import.meta !== "undefined" && import.meta.env?.DEV
+      ? "/ygoprodeck-search-api/cards.php"
+      : typeof import.meta !== "undefined" &&
+        import.meta.env?.VITE_YGOPRO_SEARCH_API_BASE
+      ? import.meta.env.VITE_YGOPRO_SEARCH_API_BASE
+      : "https://ygoprodeck.com/api/search/cards.php",
+  } = {}
+) => {
+  const params = new URLSearchParams();
+  if (num) params.set("num", String(num));
+  if (query) params.set("name", query);
+  if (sort) params.set("sort", sort);
+  if (offset) params.set("offset", String(offset));
+
+  const queryString = params.toString().replace(/\+/g, "%20");
+  return `${apiBase}?${queryString}`;
+};
+
+export const searchCardsFromYGOPRODeck = async (
+  query,
+  {
+    num = 18,
+    offset = 0,
+    sort = "new",
+    fetcher = fetch,
+    apiBase,
+  } = {}
+) => {
+  const trimmed = (query || "").trim();
+  if (!trimmed) {
+    return { cards: [], data: [], paging: null };
+  }
+
+  const url = buildYgoprodeckSearchUrl(trimmed, {
+    num,
+    offset,
+    sort,
+    apiBase,
+  });
+
+  const response = await fetcher(url);
+
+  if (response.status === 400 || response.status === 404) {
+    return { cards: [], data: [], paging: null };
+  }
+
+  if (!response.ok) {
+    throw new Error(`YGOPRODeck search failed with status ${response.status}`);
+  }
+
+  const result = await response.json();
+  const rawCards = Array.isArray(result)
+    ? result
+    : result.cards || result.data || [];
+  const cards = rawCards.map(normalizeSearchCard).filter(Boolean);
+
+  return {
+    cards,
+    data: cards,
+    paging: result.paging || null,
+  };
+};
+
 export const fetchCardInfoFromYGOPRODeck = async (
   query,
-  num = 5,
-  offset = 0
+  num = 18,
+  offset = 0,
+  options = {}
 ) => {
-  const response = await fetch(
-    `https://db.ygoprodeck.com/api/v7/cardinfo.php?fname=${encodeURIComponent(
-      query
-    )}&num=${num}&offset=${offset}&sort=name`
-  );
-  if (!response.ok) throw new Error("Network response was not ok");
-  const data = await response.json();
-  return data || [];
+  return searchCardsFromYGOPRODeck(query, {
+    num,
+    offset,
+    sort: options.sort || "new",
+    fetcher: options.fetcher || fetch,
+    apiBase: options.apiBase,
+  });
 };
+

@@ -16,6 +16,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/ygoprodeck-api/, ""),
       },
+      "/ygoprodeck-search-api": {
+        target: "https://ygoprodeck.com/api/search",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/ygoprodeck-search-api/, ""),
+      },
       "/ygoprodeck-image": {
         target: "https://images.ygoprodeck.com",
         changeOrigin: true,

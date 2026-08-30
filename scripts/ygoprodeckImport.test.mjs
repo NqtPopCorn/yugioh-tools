@@ -106,8 +106,8 @@ assert.equal(
   1
 );
 assert.equal(
-  calls.filter((url) => url.includes("images/cards/46986414.jpg")).length,
-  1
+  result.urls[0],
+  "/ygoprodeck-image/images/cards/46986414.jpg"
 );
 assert.deepEqual(sleeps, [100]);
 

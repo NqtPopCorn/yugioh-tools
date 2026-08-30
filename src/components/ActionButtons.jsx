@@ -62,21 +62,6 @@ export default function ActionButtons({ urlList, setUrlList }) {
 
     return (
         <div className="space-y-4 mb-4">
-            <div className="grid grid-cols-2 gap-2">
-                <button
-                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                    onClick={() => addCard(1)}
-                >
-                    Thêm x1
-                </button>
-                <button
-                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                    onClick={() => addCard(3)}
-                >
-                    Thêm x3
-                </button>
-            </div>
-
             <div className="grid grid-cols-1 gap-2">
                 <button
                     className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"

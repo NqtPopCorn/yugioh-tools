@@ -71,7 +71,7 @@ export default function DeckImportForm({ setUrlList }) {
         disabled={isImporting}
         onClick={handleImport}
       >
-        {isImporting ? "Dang import..." : "Import anh"}
+        {isImporting ? "Importing..." : "Start import"}
       </button>
       {isImporting && (
         <p className="mt-2 text-xs text-gray-600">

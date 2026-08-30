@@ -9,7 +9,11 @@
  * Rate limit: 20 req/s (token bucket, per-isolate)
  */
 
-const ALLOWED_HOST = "images.ygoprodeck.com";
+const ALLOWED_HOSTS = new Set([
+  "images.ygoprodeck.com",
+  "ygoprodeck.com",
+  "db.ygoprodeck.com",
+]);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -85,8 +89,8 @@ export default {
       return new Response("Invalid URL", { status: 400 });
     }
 
-    if (parsedUrl.hostname !== ALLOWED_HOST) {
-      return new Response(`Only ${ALLOWED_HOST} is allowed`, { status: 403 });
+    if (!ALLOWED_HOSTS.has(parsedUrl.hostname)) {
+      return new Response(`Host ${parsedUrl.hostname} is not allowed`, { status: 403 });
     }
 
     // Fetch ảnh từ YGOPRODeck

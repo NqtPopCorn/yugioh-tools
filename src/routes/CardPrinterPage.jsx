@@ -13,7 +13,6 @@ export default function App() {
       return [];
     }
   });
-  const [selectedIndex, setSelectedIndex] = useState(null);
   const [cardDimensions, setCardDimensions] = useState(() => {
     try {
       const saved = localStorage.getItem("yugiohCardDimensions");
@@ -22,6 +21,7 @@ export default function App() {
       return { width: 62, height: 90 };
     }
   });
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
 
 
@@ -44,15 +44,47 @@ export default function App() {
   // Handle paste from clipboard
   useEffect(() => {
     const handlePaste = async (e) => {
-      const items = e.clipboardData.items;
+      // Bỏ qua khi đang focus vào ô input / textarea / contenteditable
+      const activeEl = document.activeElement;
+      const tag = activeEl?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || activeEl?.isContentEditable) {
+        return;
+      }
+
+      const items = e.clipboardData?.items || [];
+      let handledImage = false;
+
       for (const item of items) {
         if (item.type.startsWith("image/")) {
+          e.preventDefault();
           const file = item.getAsFile();
-          const reader = new FileReader();
-          reader.onload = () => {
-            setUrlList((prev) => [...prev, reader.result]);
-          };
-          reader.readAsDataURL(file);
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+              if (reader.result) {
+                setUrlList((prev) => [...prev, reader.result]);
+              }
+            };
+            reader.readAsDataURL(file);
+            handledImage = true;
+          }
+        }
+      }
+
+      // Nếu không có image blob từ clipboard, kiểm tra text có phải base64 (data:image/)
+      if (!handledImage && e.clipboardData) {
+        const text = e.clipboardData.getData("text/plain")?.trim();
+        if (text && text.startsWith("data:image/")) {
+          e.preventDefault();
+          const lines = text
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter((l) => l.startsWith("data:image/"));
+          if (lines.length > 0) {
+            setUrlList((prev) => [...prev, ...lines]);
+          } else {
+            setUrlList((prev) => [...prev, text]);
+          }
         }
       }
     };
@@ -62,18 +94,20 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex flex-col md:flex-row">
+    <div className="flex flex-col md:flex-row min-h-screen">
       <Sidebar
         urlList={urlList}
         setUrlList={setUrlList}
-        cardDimensions={cardDimensions}
-        setCardDimensions={setCardDimensions}
+        isOpen={isLeftSidebarOpen}
+        setIsOpen={setIsLeftSidebarOpen}
       />
       <MainContent
         urlList={urlList}
         setUrlList={setUrlList}
-        selectedIndex={selectedIndex}
-        setSelectedIndex={setSelectedIndex}
+        cardDimensions={cardDimensions}
+        setCardDimensions={setCardDimensions}
+        onToggleLeftSidebar={() => setIsLeftSidebarOpen((prev) => !prev)}
+        isLeftSidebarOpen={isLeftSidebarOpen}
       />
 
       {/* Sidebar Phải - Tìm kiếm */}

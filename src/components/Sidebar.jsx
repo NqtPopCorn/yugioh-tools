@@ -1,88 +1,84 @@
 "use client";
 import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react"; // Cần cài lucide-react nếu chưa có
-import HelpTooltip from "./HelpTooltip";
+import { ListIndentDecrease, HelpCircle } from "lucide-react";
+import TutorialModal from "./TutorialModal";
 import ImageForm from "./ImageForm";
 import DeckImportForm from "./DeckImportForm";
 import ActionButtons from "./ActionButtons";
-import CardSizeSettings from "./CardSizeSettings";
-import { exportPDF } from "../services/print";
 
 export default function Sidebar({
   urlList,
   setUrlList,
-  cardDimensions,
-  setCardDimensions,
+  isOpen = true,
+  setIsOpen,
 }) {
-  const [isMobileExpanded, setIsMobileExpanded] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(true);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
-  const handleExportPDF = () => {
-    exportPDF(urlList, cardDimensions);
-  };
+  const open = isOpen !== undefined ? isOpen : internalOpen;
+  const setOpen = setIsOpen || setInternalOpen;
 
   return (
-    <div
-      id="sidebar"
-      className="w-full bg-gray-100 border-r border-gray-300 transform transition-transform duration-300 ease-in-out
-            sticky top-0 z-40 border-b md:border-b-0
-            md:translate-x-0 md:block md:h-screen md:w-80 md:static md:overflow-y-auto"
-    >
-      <div className="p-4">
-        {/* Header Area */}
-        <div className="flex justify-between items-center mb-4 relative">
-          <h2 className="flex-grow text-center font-bold text-lg">
-            Yu-Gi-Oh PDF
-          </h2>
+    <>
+      {/* Mobile Backdrop (Lớp phủ mờ khi mở trên mobile) */}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
+      {/* Main Sidebar Container (Mobile: trượt từ trái; Desktop: cố định luôn hiển thị) */}
+      <div
+        id="sidebar"
+        className={`
+          bg-gray-100 border-r border-gray-300 flex flex-col shadow-lg md:shadow-none z-50
+          fixed inset-y-0 left-0 transition-transform duration-300 ease-in-out
+          ${open ? "translate-x-0 w-[85vw] max-w-xs" : "-translate-x-full w-[85vw] max-w-xs"}
+          md:translate-x-0 md:static md:h-screen md:sticky md:top-0 md:w-80 md:shrink-0
+        `}
+      >
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center whitespace-nowrap overflow-hidden">
+          <div className="flex items-center gap-2">
+            {/* Nút Đóng Sidebar (Chỉ hiện trên Mobile) */}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="md:hidden p-1 rounded hover:bg-gray-200 text-gray-600 transition-colors cursor-pointer"
+              title="Đóng sidebar"
+            >
+              <ListIndentDecrease size={20} />
+            </button>
+            <h2 className="font-bold text-lg text-gray-800">Yu-Gi-Oh PDF</h2>
+          </div>
 
           <div className="flex items-center gap-2">
-            <HelpTooltip />
-
-            {/* Nút Toggle chỉ hiện ở Mobile */}
             <button
-              className="md:hidden p-1 bg-gray-200 rounded hover:bg-gray-300"
-              onClick={() => setIsMobileExpanded(!isMobileExpanded)}
+              type="button"
+              onClick={() => setIsTutorialOpen(true)}
+              className="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-150 cursor-pointer border border-gray-200 hover:border-indigo-200 shadow-2xs flex items-center gap-1"
+              title="Xem hướng dẫn sử dụng"
             >
-              {isMobileExpanded ? (
-                <ChevronUp size={20} />
-              ) : (
-                <ChevronDown size={20} />
-              )}
+              <HelpCircle size={18} />
+              <span className="hidden sm:inline text-xs font-medium">Hướng dẫn</span>
             </button>
           </div>
         </div>
 
-        {/* Phần Input Ảnh - LUÔN HIỂN THỊ (theo yêu cầu) */}
-        <ImageForm urlList={urlList} setUrlList={setUrlList} />
-
-        <p className="text-gray-500 text-sm italic text-center mb-2">
-          Hoặc dán ảnh từ clipboard
-        </p>
-
-        <DeckImportForm setUrlList={setUrlList} />
-
-        {/* Phần mở rộng: Settings, Actions, Export */}
-        {/* Logic: Ẩn trên mobile trừ khi được expand. Luôn hiện trên Desktop (md:block) */}
-        <div
-          className={`${isMobileExpanded ? "block" : "hidden"} md:block mt-4`}
-        >
+        {/* Scrollable Form Content */}
+        <div className="p-4 overflow-y-auto flex-1 space-y-4">
+          <ImageForm urlList={urlList} setUrlList={setUrlList} />
+          <DeckImportForm setUrlList={setUrlList} />
           <ActionButtons urlList={urlList} setUrlList={setUrlList} />
-
-          <hr className="my-4 border-gray-300" />
-
-          <CardSizeSettings
-            cardDimensions={cardDimensions}
-            setCardDimensions={setCardDimensions}
-          />
-
-          <button
-            className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mt-2 shadow-sm"
-            onClick={handleExportPDF}
-          >
-            <i className="fa-solid fa-file-pdf mr-2"></i>
-            Xuất PDF
-          </button>
         </div>
       </div>
-    </div>
+
+      {/* Tutorial Modal */}
+      <TutorialModal
+        isOpen={isTutorialOpen}
+        onClose={() => setIsTutorialOpen(false)}
+      />
+    </>
   );
 }
