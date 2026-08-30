@@ -29,6 +29,18 @@ assert.equal(
   "https://ygoprodeck.com/api/search/cards.php?num=18&name=dark%20magician&sort=new&offset=18"
 );
 
+// Test 2b: buildYgoprodeckSearchUrl with Worker proxy endpoint (/search)
+const urlProxy = buildYgoprodeckSearchUrl("dark magician", {
+  num: 18,
+  offset: 0,
+  sort: "new",
+  apiBase: "https://yugioh-image-proxy.nqt26304.workers.dev/search",
+});
+assert.equal(
+  urlProxy,
+  "https://yugioh-image-proxy.nqt26304.workers.dev/search?num=18&name=dark%20magician&sort=new"
+);
+
 // Test 3: normalizeSearchCard
 const rawCard = {
   id: 77456448,
@@ -116,11 +128,29 @@ const notFoundRes = await searchCardsFromYGOPRODeck("nonexistentcardxyz", {
 assert.deepEqual(notFoundRes.cards, []);
 assert.equal(notFoundRes.paging, null);
 
-// Test 7: fetchCardInfoFromYGOPRODeck backward compatibility
-const compatRes = await fetchCardInfoFromYGOPRODeck("light and darkness", 18, 0, {
-  fetcher: mockFetcher,
+// Test 8: searchCardsFromYGOPRODeck client-side cache test
+let networkFetchCount = 0;
+const countingFetcher = async () => {
+  networkFetchCount++;
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({ cards: [{ id: 12345, name: "Cached Card" }] }),
+  };
+};
+
+await searchCardsFromYGOPRODeck("cached test query", {
+  fetcher: countingFetcher,
   apiBase: "https://ygoprodeck.com/api/search/cards.php",
 });
-assert.equal(compatRes.data.length, 1);
+assert.equal(networkFetchCount, 1);
+
+// Second call should hit in-memory cache without triggering fetcher
+const cachedResult = await searchCardsFromYGOPRODeck("cached test query", {
+  fetcher: countingFetcher,
+  apiBase: "https://ygoprodeck.com/api/search/cards.php",
+});
+assert.equal(networkFetchCount, 1);
+assert.equal(cachedResult.cards[0].name, "Cached Card");
 
 console.log("card service tests passed");

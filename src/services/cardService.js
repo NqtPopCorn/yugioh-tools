@@ -139,6 +139,9 @@ export const buildYgoprodeckSearchUrl = (
     apiBase = typeof import.meta !== "undefined" && import.meta.env?.DEV
       ? "/ygoprodeck-search-api/cards.php"
       : typeof import.meta !== "undefined" &&
+        import.meta.env?.VITE_YGOPRO_SEARCH_PROXY
+      ? import.meta.env.VITE_YGOPRO_SEARCH_PROXY
+      : typeof import.meta !== "undefined" &&
         import.meta.env?.VITE_YGOPRO_SEARCH_API_BASE
       ? import.meta.env.VITE_YGOPRO_SEARCH_API_BASE
       : "https://ygoprodeck.com/api/search/cards.php",
@@ -154,6 +157,13 @@ export const buildYgoprodeckSearchUrl = (
   return `${apiBase}?${queryString}`;
 };
 
+const searchCache = new Map();
+const MAX_SEARCH_CACHE_ENTRIES = 100;
+
+export const clearSearchCache = () => {
+  searchCache.clear();
+};
+
 export const searchCardsFromYGOPRODeck = async (
   query,
   {
@@ -162,6 +172,7 @@ export const searchCardsFromYGOPRODeck = async (
     sort = "new",
     fetcher = fetch,
     apiBase,
+    useCache = true,
   } = {}
 ) => {
   const trimmed = (query || "").trim();
@@ -176,10 +187,22 @@ export const searchCardsFromYGOPRODeck = async (
     apiBase,
   });
 
+  if (useCache && searchCache.has(url)) {
+    return searchCache.get(url);
+  }
+
   const response = await fetcher(url);
 
   if (response.status === 400 || response.status === 404) {
-    return { cards: [], data: [], paging: null };
+    const emptyResult = { cards: [], data: [], paging: null };
+    if (useCache) {
+      if (searchCache.size >= MAX_SEARCH_CACHE_ENTRIES) {
+        const firstKey = searchCache.keys().next().value;
+        searchCache.delete(firstKey);
+      }
+      searchCache.set(url, emptyResult);
+    }
+    return emptyResult;
   }
 
   if (!response.ok) {
@@ -192,11 +215,21 @@ export const searchCardsFromYGOPRODeck = async (
     : result.cards || result.data || [];
   const cards = rawCards.map(normalizeSearchCard).filter(Boolean);
 
-  return {
+  const formattedResult = {
     cards,
     data: cards,
     paging: result.paging || null,
   };
+
+  if (useCache) {
+    if (searchCache.size >= MAX_SEARCH_CACHE_ENTRIES) {
+      const firstKey = searchCache.keys().next().value;
+      searchCache.delete(firstKey);
+    }
+    searchCache.set(url, formattedResult);
+  }
+
+  return formattedResult;
 };
 
 export const fetchCardInfoFromYGOPRODeck = async (
