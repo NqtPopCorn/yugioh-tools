@@ -53,4 +53,14 @@ assert.deepEqual(parseDecklistText("Dark Magician x0").skipped, [
   },
 ]);
 
+// YDKE test
+const ydkeSample = "ydke://rvTMAg==!rvTMAg==!rvTMAg==!";
+const ydkeResult = parseDecklistText(ydkeSample);
+assert.deepEqual(ydkeResult.items, [
+  { type: "id", value: "46986414", quantity: 1, lineNumber: 1 },
+  { type: "id", value: "46986414", quantity: 1, lineNumber: 2 },
+  { type: "id", value: "46986414", quantity: 1, lineNumber: 3 },
+]);
+
 console.log("deck parser tests passed");
+

@@ -27,6 +27,8 @@ import {
   CheckSquare,
   X,
   Menu,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 import { exportPDF } from "../services/print";
 
@@ -43,6 +45,10 @@ export default function MainContent({
   setCardDimensions,
   onToggleLeftSidebar,
   isLeftSidebarOpen,
+  undo,
+  redo,
+  canUndo,
+  canRedo,
 }) {
   const [isExporting, setIsExporting] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -383,31 +389,59 @@ export default function MainContent({
           </div>
         </div>
 
-        {/* Nút Xuất PDF */}
-        <button
-          onClick={handleOpenExportModal}
-          disabled={totalCards === 0 || isExporting}
-          className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all shadow-xs shrink-0 ${
-            totalCards === 0
-              ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
-              : isExporting
-              ? "bg-blue-400 text-white cursor-wait"
-              : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-blue-200 hover:shadow-md cursor-pointer active:scale-98"
-          }`}
-          title={totalCards === 0 ? "Thêm thẻ bài để xuất PDF" : "Tùy chọn format và xuất file PDF"}
-        >
-          {isExporting ? (
-            <>
-              <Loader2 size={15} className="animate-spin sm:w-[18px] sm:h-[18px]" />
-              <span className="hidden xs:inline sm:inline">Đang xuất...</span>
-            </>
-          ) : (
-            <>
-              <FileDown size={15} className="sm:w-[18px] sm:h-[18px]" />
-              <span className="font-semibold">Xuất PDF ({totalCards})</span>
-            </>
-          )}
-        </button>
+        {/* Action Controls: Undo/Redo & Export PDF */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Nút Hoàn tác (Undo) & Làm lại (Redo) */}
+          <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg p-0.5">
+            <button
+              type="button"
+              onClick={undo}
+              disabled={!canUndo}
+              className="p-1.5 text-gray-700 hover:text-indigo-600 hover:bg-white active:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-md transition-all cursor-pointer"
+              title="Hoàn tác thao tác vừa rồi (Ctrl + Z)"
+              aria-label="Hoàn tác"
+            >
+              <Undo2 size={16} />
+            </button>
+            <div className="h-4 w-px bg-gray-200 mx-0.5" />
+            <button
+              type="button"
+              onClick={redo}
+              disabled={!canRedo}
+              className="p-1.5 text-gray-700 hover:text-indigo-600 hover:bg-white active:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-md transition-all cursor-pointer"
+              title="Làm lại thao tác vừa hoàn tác (Ctrl + Y hoặc Ctrl + Shift + Z)"
+              aria-label="Làm lại"
+            >
+              <Redo2 size={16} />
+            </button>
+          </div>
+
+          {/* Nút Xuất PDF */}
+          <button
+            onClick={handleOpenExportModal}
+            disabled={totalCards === 0 || isExporting}
+            className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all shadow-xs shrink-0 ${
+              totalCards === 0
+                ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                : isExporting
+                ? "bg-blue-400 text-white cursor-wait"
+                : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-blue-200 hover:shadow-md cursor-pointer active:scale-98"
+            }`}
+            title={totalCards === 0 ? "Thêm thẻ bài để xuất PDF" : "Tùy chọn format và xuất file PDF"}
+          >
+            {isExporting ? (
+              <>
+                <Loader2 size={15} className="animate-spin sm:w-[18px] sm:h-[18px]" />
+                <span className="hidden xs:inline sm:inline">Đang xuất...</span>
+              </>
+            ) : (
+              <>
+                <FileDown size={15} className="sm:w-[18px] sm:h-[18px]" />
+                <span className="font-semibold">Xuất PDF ({totalCards})</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Grid thẻ bài */}
@@ -433,7 +467,7 @@ export default function MainContent({
             ) : (
               <div
                 id="card-container"
-                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
               >
                 {urlList.map((url, index) => (
                   <SortableCard
@@ -462,20 +496,26 @@ export default function MainContent({
         </DndContext>
       </div>
 
-      {/* Floating Action Bar khi có multi-select */}
+      {/* Floating Action Bar khi có multi-select (Responsive icon-first) */}
       {selectedIndices.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-gray-900/95 backdrop-blur-md text-white px-4 md:px-5 py-3 rounded-2xl shadow-2xl border border-gray-700/80 flex items-center gap-2 md:gap-3 flex-wrap max-w-[95vw] animate-in slide-in-from-bottom-5 duration-200">
-          <div className="flex items-center gap-2 pr-3 border-r border-gray-700">
-            <span className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center">
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 bg-gray-900/95 backdrop-blur-md text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl shadow-2xl border border-gray-700/80 flex items-center gap-2 sm:gap-3 max-w-[95vw] animate-in slide-in-from-bottom-5 duration-200">
+          {/* Badge số lượng thẻ đã chọn */}
+          <div className="flex items-center gap-1.5 pl-0.5 pr-1 sm:pr-2">
+            <span className="min-w-[24px] h-[24px] px-1 rounded-full bg-blue-500 text-white text-xs font-bold flex items-center justify-center">
               {selectedIndices.size}
             </span>
-            <span className="text-xs md:text-sm font-medium whitespace-nowrap">
-              Đã chọn
+            <span className="text-xs text-gray-300 font-medium hidden md:inline whitespace-nowrap">
+              đã chọn
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
+          <div className="h-5 w-px bg-gray-700 shrink-0" />
+
+          {/* Nhóm nút Action */}
+          <div className="flex items-center gap-2 sm:gap-2">
+            {/* Chọn tất cả / Bỏ chọn */}
             <button
+              type="button"
               onClick={() => {
                 if (selectedIndices.size === urlList.length) {
                   handleClearSelection();
@@ -483,49 +523,67 @@ export default function MainContent({
                   handleSelectAll();
                 }
               }}
-              className="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="p-2.5 sm:px-2.5 sm:py-1.5 bg-gray-800 hover:bg-gray-700 active:bg-gray-600 rounded-xl sm:rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer text-gray-200"
+              title={
+                selectedIndices.size === urlList.length
+                  ? "Bỏ chọn tất cả (Esc)"
+                  : "Chọn tất cả thẻ (Ctrl + A)"
+              }
+              aria-label="Chọn tất cả hoặc bỏ chọn"
             >
-              <CheckSquare size={13} />
-              <span>
+              <CheckSquare size={16} className="text-gray-300" />
+              <span className="hidden lg:inline">
                 {selectedIndices.size === urlList.length
                   ? "Bỏ chọn"
                   : "Chọn tất cả"}
               </span>
             </button>
 
+            {/* Nhân bản */}
             <button
+              type="button"
               onClick={handleDuplicateSelected}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-              title="Nhân bản các thẻ đã chọn"
+              className="p-2.5 sm:px-3 sm:py-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white rounded-xl sm:rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title={`Nhân bản ${selectedIndices.size} thẻ đã chọn`}
+              aria-label="Nhân bản các thẻ đã chọn"
             >
-              <Copy size={13} />
-              <span>Nhân bản ({selectedIndices.size})</span>
+              <Copy size={16} />
+              <span className="hidden sm:inline">Nhân bản</span>
             </button>
 
+            {/* Xuất PDF riêng */}
             <button
+              type="button"
               onClick={handleExportSelected}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-              title="Xuất PDF riêng các thẻ đã chọn"
+              className="p-2.5 sm:px-3 sm:py-1.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl sm:rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title={`Xuất PDF riêng cho ${selectedIndices.size} thẻ đã chọn`}
+              aria-label="Xuất PDF riêng các thẻ đã chọn"
             >
-              <FileDown size={13} />
-              <span>Xuất PDF ({selectedIndices.size})</span>
+              <FileDown size={16} />
+              <span className="hidden sm:inline">Xuất PDF</span>
             </button>
 
+            {/* Xóa */}
             <button
+              type="button"
               onClick={handleDeleteSelected}
-              className="px-3 py-1.5 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-              title="Xóa các thẻ đã chọn"
+              className="p-2.5 sm:px-3 sm:py-1.5 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white rounded-xl sm:rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title={`Xóa ${selectedIndices.size} thẻ đã chọn (Delete)`}
+              aria-label="Xóa các thẻ đã chọn"
             >
-              <Trash2 size={13} />
-              <span>Xóa ({selectedIndices.size})</span>
+              <Trash2 size={16} />
+              <span className="hidden sm:inline">Xóa</span>
             </button>
 
+            {/* Đóng / Hủy chọn */}
             <button
+              type="button"
               onClick={handleClearSelection}
-              className="p-1.5 hover:bg-gray-800 rounded-lg text-gray-400 hover:text-white transition-colors cursor-pointer ml-0.5"
+              className="p-2 hover:bg-gray-800 active:bg-gray-700 rounded-xl sm:rounded-lg text-gray-400 hover:text-white transition-all cursor-pointer ml-1"
               title="Bỏ chọn (Esc)"
+              aria-label="Bỏ chọn"
             >
-              <X size={15} />
+              <X size={17} />
             </button>
           </div>
         </div>

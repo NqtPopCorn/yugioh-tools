@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { ListIndentDecrease, HelpCircle } from "lucide-react";
 import TutorialModal from "./TutorialModal";
+import FileUploadModal from "./FileUploadModal";
 import ImageForm from "./ImageForm";
 import DeckImportForm from "./DeckImportForm";
 import ActionButtons from "./ActionButtons";
@@ -14,13 +15,19 @@ export default function Sidebar({
 }) {
   const [internalOpen, setInternalOpen] = useState(true);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [deckText, setDeckText] = useState("");
 
   const open = isOpen !== undefined ? isOpen : internalOpen;
   const setOpen = setIsOpen || setInternalOpen;
 
+  const handleDeckFileLoaded = (loadedContent) => {
+    setDeckText(loadedContent);
+  };
+
   return (
     <>
-      {/* Mobile Backdrop (Lớp phủ mờ khi mở trên mobile) */}
+      {/* Mobile Backdrop */}
       {open && (
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity"
@@ -28,7 +35,7 @@ export default function Sidebar({
         />
       )}
 
-      {/* Main Sidebar Container (Mobile: trượt từ trái; Desktop: cố định luôn hiển thị) */}
+      {/* Main Sidebar Container */}
       <div
         id="sidebar"
         className={`
@@ -41,7 +48,7 @@ export default function Sidebar({
         {/* Header */}
         <div className="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center whitespace-nowrap overflow-hidden">
           <div className="flex items-center gap-2">
-            {/* Nút Đóng Sidebar (Chỉ hiện trên Mobile) */}
+            {/* Nút Đóng Sidebar (Mobile) */}
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -68,8 +75,17 @@ export default function Sidebar({
 
         {/* Scrollable Form Content */}
         <div className="p-4 overflow-y-auto flex-1 space-y-4">
-          <ImageForm urlList={urlList} setUrlList={setUrlList} />
-          <DeckImportForm setUrlList={setUrlList} />
+          <ImageForm
+            urlList={urlList}
+            setUrlList={setUrlList}
+            onOpenUploadModal={() => setIsUploadModalOpen(true)}
+          />
+          <DeckImportForm
+            setUrlList={setUrlList}
+            deckText={deckText}
+            setDeckText={setDeckText}
+            onOpenUploadModal={() => setIsUploadModalOpen(true)}
+          />
           <ActionButtons urlList={urlList} setUrlList={setUrlList} />
         </div>
       </div>
@@ -79,6 +95,17 @@ export default function Sidebar({
         isOpen={isTutorialOpen}
         onClose={() => setIsTutorialOpen(false)}
       />
+
+      {/* File Upload Modal (Chỉ modal này chứa vùng Kéo thả & Upload) */}
+      <FileUploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        urlList={urlList}
+        setUrlList={setUrlList}
+        onDeckFileLoaded={handleDeckFileLoaded}
+      />
     </>
   );
 }
+
+

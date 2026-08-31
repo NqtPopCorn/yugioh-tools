@@ -22,6 +22,56 @@ const toQuantity = (rawQuantity) => {
   return quantity;
 };
 
+export const parseYdke = (ydkeString) => {
+  if (!ydkeString || typeof ydkeString !== "string") return null;
+  const clean = ydkeString.trim();
+  const match = clean.match(/^ydke:\/\/([^!]*?)!([^!]*?)!([^!]*?)!?$/i);
+  if (!match) return null;
+
+  const [_, mainB64 = "", extraB64 = "", sideB64 = ""] = match;
+
+  const decodeBlock = (b64) => {
+    if (!b64 || !b64.trim()) return [];
+    try {
+      let normalized = b64.trim().replace(/-/g, "+").replace(/_/g, "/");
+      while (normalized.length % 4 !== 0) {
+        normalized += "=";
+      }
+      const binStr =
+        typeof atob === "function"
+          ? atob(normalized)
+          : Buffer.from(normalized, "base64").toString("binary");
+
+      const bytes = new Uint8Array(binStr.length);
+      for (let i = 0; i < binStr.length; i++) {
+        bytes[i] = binStr.charCodeAt(i);
+      }
+
+      const dataView = new DataView(
+        bytes.buffer,
+        bytes.byteOffset,
+        bytes.byteLength
+      );
+      const ids = [];
+      for (let i = 0; i + 4 <= bytes.length; i += 4) {
+        const id = dataView.getUint32(i, true);
+        if (id > 0) {
+          ids.push(String(id));
+        }
+      }
+      return ids;
+    } catch {
+      return [];
+    }
+  };
+
+  return {
+    main: decodeBlock(mainB64),
+    extra: decodeBlock(extraB64),
+    side: decodeBlock(sideB64),
+  };
+};
+
 const parsePlaintextLine = (line, lineNumber) => {
   const prefixMatch = line.match(/^(\d{1,2})\s*x?\s+(.+)$/i);
   if (prefixMatch) {
@@ -72,6 +122,24 @@ const parsePlaintextLine = (line, lineNumber) => {
 export const parseDecklistText = (text) => {
   const items = [];
   const skipped = [];
+  const trimmed = String(text || "").trim();
+
+  if (trimmed.startsWith("ydke://")) {
+    const ydke = parseYdke(trimmed);
+    if (ydke) {
+      const allIds = [...ydke.main, ...ydke.extra, ...ydke.side];
+      allIds.forEach((id, index) => {
+        items.push({
+          type: "id",
+          value: id,
+          quantity: 1,
+          lineNumber: index + 1,
+        });
+      });
+      return { items, skipped };
+    }
+  }
+
   const lines = String(text || "").split(/\r?\n/);
   let currentSection = null;
 
@@ -108,3 +176,4 @@ export const parseDecklistText = (text) => {
 
   return { items, skipped };
 };
+

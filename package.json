@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node scripts/deckParser.test.mjs && node scripts/deviantArtService.test.mjs && node scripts/cardService.test.mjs && node scripts/ygoprodeckImport.test.mjs && node scripts/worker.test.mjs",
+    "test": "node scripts/deckParser.test.mjs && node scripts/deviantArtService.test.mjs && node scripts/cardService.test.mjs && node scripts/ygoprodeckImport.test.mjs && node scripts/worker.test.mjs && node scripts/historyState.test.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy": "gh-pages -d dist"

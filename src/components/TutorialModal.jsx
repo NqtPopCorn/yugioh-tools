@@ -268,16 +268,16 @@ export default function TutorialModal({ isOpen, onClose }) {
                   </p>
                 </div>
 
-                {/* Method 4: Decklist text / YDK */}
+                {/* Method 4: Decklist file / text */}
                 <div className="border border-gray-200 rounded-xl p-4 bg-white hover:border-indigo-300 transition-colors">
                   <div className="flex items-center gap-2 font-semibold text-gray-900 mb-2">
                     <div className="p-1.5 bg-amber-100 text-amber-700 rounded-lg">
                       <FileText size={16} />
                     </div>
-                    <span>4. Import Decklist YDK / Text</span>
+                    <span>4. Kéo thả & Import file Decklist (.ydk, .txt, YDKE)</span>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">
-                    Dán toàn bộ danh sách Passcode ID hoặc Tên bài từ YGOPRO / YGOPRODeck / EDOPro vào khung "Import decklist" để hệ thống tự động tải hàng loạt thẻ.
+                    Kéo thả hoặc chọn trực tiếp file <strong>.ydk / .txt</strong> (xuất từ EDOPro, YGO Omega, YGOPRODeck, DuelingBook) hoặc dán mã YDKE/danh sách tên bài để tự động tải hàng loạt thẻ chỉ với 1 cú nhấp.
                   </p>
                 </div>
 
@@ -383,6 +383,20 @@ export default function TutorialModal({ isOpen, onClose }) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
+                    <tr className="hover:bg-gray-50/80 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-indigo-700">
+                        <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded shadow-2xs">Ctrl</kbd> + <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded shadow-2xs">Z</kbd>
+                      </td>
+                      <td className="py-3 px-4 font-medium text-gray-900">Hoàn tác (Undo)</td>
+                      <td className="py-3 px-4 text-gray-500 text-xs hidden sm:table-cell">Rollback lại thao tác xóa, sửa, import sai</td>
+                    </tr>
+                    <tr className="hover:bg-gray-50/80 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-indigo-700">
+                        <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded shadow-2xs">Ctrl</kbd> + <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded shadow-2xs">Y</kbd>
+                      </td>
+                      <td className="py-3 px-4 font-medium text-gray-900">Làm lại (Redo)</td>
+                      <td className="py-3 px-4 text-gray-500 text-xs hidden sm:table-cell">Phục hồi lại thao tác vừa Undo (hoặc Ctrl+Shift+Z)</td>
+                    </tr>
                     <tr className="hover:bg-gray-50/80 transition-colors">
                       <td className="py-3 px-4 font-mono font-bold text-indigo-700">
                         <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded shadow-2xs">Ctrl</kbd> + <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded shadow-2xs">V</kbd>

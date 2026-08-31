@@ -11,11 +11,7 @@ const router = createHashRouter([
   {
     path: "/card-printer",
     element: <CardPrinterPage />,
-  },
-  {
-    path: "/link-maker",
-    element: <LinkMaker />,
-  },
+  }
 ]);
 
 const App = () => {
